@@ -1,0 +1,63 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>長庚大學公車動態</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: sans-serif; padding: 2em; background: #f8f8f8; }
+    h1 { font-size: 1.5em; margin-bottom: 1em; }
+    ul { list-style: none; padding: 0; }
+    li { background: #fff; margin: 0.5em 0; padding: 1em; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; justify-content: space-between; }
+    .route { font-weight: bold; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>🚍 長庚大學公車動態（967 / 967直）</h1>
+  <div id="error" class="error"></div>
+  <ul id="result">
+    <li>載入中...</li>
+  </ul>
+
+  <script>
+    const resultEl = document.getElementById("result");
+    const errorEl = document.getElementById("error");
+
+    function renderResult(data) {
+      resultEl.innerHTML = "";
+      data.forEach(({ route, eta }) => {
+        let text = "無資料";
+        if (eta.length > 0) {
+          const item = eta[0];
+          if (item.StopStatus !== 0) {
+            const status = ["正常", "未發車", "交管不停靠", "末班車已過", "今日停駛"];
+            text = status[item.StopStatus] || "未知狀態";
+          } else if (item.EstimateTime != null) {
+            const min = Math.round(item.EstimateTime / 60);
+            text = min === 0 ? "進站中" : `${min} 分鐘`;
+          }
+        }
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="route">${route}</span><span>${text}</span>`;
+        resultEl.appendChild(li);
+      });
+    }
+
+    async function loadData() {
+      try {
+        const res = await fetch("/api/eta");
+        const json = await res.json();
+        renderResult(json.routes);
+      } catch (e) {
+        errorEl.textContent = "❌ 資料載入失敗：" + e.message;
+        resultEl.innerHTML = "";
+      }
+    }
+
+    loadData();
+    setInterval(loadData, 30000); // 每 30 秒更新
+  </script>
+</body>
+</html>
